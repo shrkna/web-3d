@@ -7,7 +7,7 @@
 # $trunk build
 
 [package]
-name 		= "wgpu-page"
+name 		= "wgpu-wasm-3d-renderer"
 version 	= "0.1.0"
 edition 	= "2021"
 

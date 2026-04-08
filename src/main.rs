@@ -3,10 +3,9 @@ mod rendering;
 mod types;
 mod web;
 
-use crate::{
-    rendering::webgpu::{self},
-    types::Shared,
-};
+use crate::rendering::webgpu::{self};
+use crate::types::Shared;
+use std::cell::RefCell;
 use wasm_bindgen::JsCast;
 
 #[global_allocator]
@@ -19,30 +18,28 @@ pub async fn main() {
 
     debug_log_with_time("Main");
 
-    // Scene initialize
+    // Initialize scene
     let scene: engine::scene::Scene = engine::scene::Scene::new();
-    let scene: Shared<engine::scene::Scene> = std::rc::Rc::new(std::cell::RefCell::new(scene));
+    let scene: Shared<engine::scene::Scene> = Shared::new(RefCell::new(scene));
 
-    // Load .gltf data
+    // Load .gltf file and initialize scene objects and materials
     (scene.borrow_mut().objects, scene.borrow_mut().materials) =
         engine::load::load_gltf_scene(engine::define::GLTF_LOGO_PATH).await;
 
-    // Batch objects
-    //engine::scene::batch_objects(&scene);
+    // Batch scene objects
+    engine::scene::batch_objects(&scene);
 
-    // Initialize rendering context
+    // Initialize WebGPU interface
     let webgpu_interface: rendering::webgpu::WebGPUInterface =
         rendering::webgpu::init_interface().await;
 
-    // Initialize rendering resources
+    // Initialize mesh rendering context
     let object_num: usize = scene.borrow().objects.len();
     for i in 0..object_num {
         let is_mesh: bool = scene.borrow().objects.get(i).unwrap().source_mesh.is_some();
         if is_mesh {
-            let rendering_resource: std::rc::Rc<
-                std::cell::RefCell<webgpu::WebGPURenderingResource>,
-            > = std::rc::Rc::new(std::cell::RefCell::new(
-                rendering::webgpu::create_rendering_resource(
+            let mesh_rendering_resource: Shared<webgpu::WebGPUMeshRenderingResource> = Shared::new(
+                RefCell::new(rendering::webgpu::create_mesh_rendering_resource(
                     &webgpu_interface,
                     &scene
                         .borrow()
@@ -54,40 +51,40 @@ pub async fn main() {
                         .unwrap()
                         .borrow(),
                     &scene.borrow().materials,
-                ),
-            ));
+                )),
+            );
             scene
                 .borrow_mut()
                 .objects
                 .get_mut(i)
                 .unwrap()
-                .rendering_resource = Some(rendering_resource);
+                .mesh_rendering_resource = Some(mesh_rendering_resource);
         }
     }
 
-    // Shader resources
+    // Global shader resources
     let mut shader_map: std::collections::HashMap<
         std::string::String,
-        rendering::webgpu::WebGPUShaderResource,
+        rendering::webgpu::WebGPUShaderContext,
     > = std::collections::HashMap::new();
 
-    // Global resource
+    // Global mesh rendering resources
     let mut global_resource_map: std::collections::HashMap<
         std::string::String,
-        rendering::webgpu::WebGPURenderingResource,
+        rendering::webgpu::WebGPUMeshRenderingResource,
     > = std::collections::HashMap::new();
 
-    // Javascript controls
-    let control_response_js: Shared<web::eventlistener::ControlResponseJs> = std::rc::Rc::new(
-        std::cell::RefCell::new(web::eventlistener::ControlResponseJs::default()),
+    // Initialize control response JS object and event listener
+    let control_response_js: Shared<web::eventlistener::ControlResponseJs> = Shared::new(
+        RefCell::new(web::eventlistener::ControlResponseJs::default()),
     );
     web::eventlistener::add_event_listener_control(&control_response_js);
 
-    // Frontend GUI
-    web::gui::start_gui(&scene);
+    // Create frontend gui interface
+    web::gui::create_frontend_gui(&scene);
 
     // Rendering loop
-    let f: Shared<Option<_>> = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let f: Shared<Option<_>> = Shared::new(RefCell::new(None));
     let g: Shared<Option<_>> = f.clone();
     *g.borrow_mut() = Some(wasm_bindgen::closure::Closure::wrap(Box::new(move || {
         engine::scene::update_control(&scene, &control_response_js);

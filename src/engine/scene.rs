@@ -21,10 +21,8 @@ pub struct SceneObject {
     pub child_index: Vec<u32>,
     pub world_transform: [[f32; 4]; 4],
     pub source_mesh: Option<Shared<rendering::common::Mesh>>,
-    pub shading_type: u8,
-    pub rendering_resource: Option<Shared<rendering::webgpu::WebGPURenderingResource>>,
-    pub render_resource_deprecated:
-        Option<Shared<rendering::webgpu::WebGPURenderingResourceDeprecated>>,
+    pub _shading_type: u8,
+    pub mesh_rendering_resource: Option<Shared<rendering::webgpu::WebGPUMeshRenderingResource>>,
 }
 
 #[derive(Clone, Default)]
@@ -52,7 +50,7 @@ pub struct SceneVariables {
     // config
     pub is_first_update: bool,
     pub convert_y_to_z: bool,
-    pub use_batched: bool,
+    pub _use_batched: bool,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -91,12 +89,12 @@ impl SceneVariables {
             directional_light_angle: [0.5, 1.0, -1.0],
             ambient_light_color: [0.0, 0.0, 0.0, 1.0],
             background_color: [0.0, 0.0, 0.0, 1.0],
-            scene_shading_type: ShadingType::Forward,
+            scene_shading_type: ShadingType::Differed,
             forward_debug_type: 0,
             differed_debug_type: 0,
             is_first_update: false,
             convert_y_to_z: true,
-            use_batched: false,
+            _use_batched: false,
         }
     }
 }
@@ -166,10 +164,9 @@ pub fn batch_objects(scene: &Shared<Scene>) {
     for batch_pair in batch_map {
         let batched_object = SceneObject {
             _name: Some("batched".to_string()),
-            shading_type: 44,
+            _shading_type: 44,
             world_transform: glam::Mat4::IDENTITY.to_cols_array_2d(),
             source_mesh: Some(std::rc::Rc::new(std::cell::RefCell::new(batch_pair.1))),
-            render_resource_deprecated: None,
             index: batch_pair.0,
             ..Default::default()
         };

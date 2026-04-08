@@ -196,15 +196,14 @@ pub async fn load_gltf_scene(
 
         let mut scene_object = engine::scene::SceneObject {
             _name: Some(node.name().unwrap().to_string()),
-            shading_type: 44,
+            _shading_type: 44,
             world_transform: node.transform().matrix(),
             source_mesh: if mesh.is_some() {
                 Some(std::rc::Rc::new(std::cell::RefCell::new(mesh.unwrap())))
             } else {
                 None
             },
-            rendering_resource: None,
-            render_resource_deprecated: None,
+            mesh_rendering_resource: None,
             index: node.index() as u32,
             ..Default::default()
         };

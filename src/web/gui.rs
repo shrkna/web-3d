@@ -2,7 +2,7 @@ use crate::engine;
 use crate::types::Shared;
 use wasm_bindgen::JsCast;
 
-pub fn start_gui(scene: &Shared<engine::scene::Scene>) {
+pub fn create_frontend_gui(scene: &Shared<engine::scene::Scene>) {
     create_panels();
     create_view_dialog(scene);
 }
