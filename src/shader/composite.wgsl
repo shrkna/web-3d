@@ -1,11 +1,21 @@
-struct VertexOutput {
+struct VertexOutput 
+{
     @builtin(position) position   : vec4<f32>,
     @location(0)       uv         : vec2<f32>
 };
 
-
 @group(0) @binding(0) var intermediate_texture      : texture_2d<f32>;
 @group(0) @binding(1) var intermediate_sampler      : sampler;
+
+fn tonemap_aces(x: vec3f) -> vec3f 
+{
+    let a = 2.51;
+    let b = 0.03;
+    let c = 2.43;
+    let d = 0.59;
+    let e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), vec3f(0.0), vec3f(1.0));
+}
 
 @vertex
 fn vs_main( @builtin(vertex_index) vertex_index : u32 ) -> VertexOutput
@@ -21,13 +31,16 @@ fn vs_main( @builtin(vertex_index) vertex_index : u32 ) -> VertexOutput
 }
 
 @fragment
-fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-    // 中間テクスチャの色をそのままサンプリングして出力
+fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f 
+{
+    // 中間テクスチャの色をそのままサンプリング
     let color = textureSample(intermediate_texture, intermediate_sampler, uv);
     
-    // ここでトーンマップなどの処理を挟むことが多い
-    // let mapped = color.rgb / (color.rgb + vec3f(1.0));
-    // return vec4f(mapped, color.a);
+    // トーンマッピング
+    var mapped = tonemap_aces(color.xyz);
 
-    return color;
+    // ガンマ補正 (Gamma Correction)
+    let final_result = pow(mapped, vec3f(1.0 / 2.2));
+
+    return vec4(final_result, 1.0);
 }

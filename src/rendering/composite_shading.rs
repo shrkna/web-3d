@@ -5,20 +5,20 @@ use crate::rendering::webgpu::{
 };
 use crate::Shared;
 
-// blit shading pass --------------------------------------------------------------------------------------
+// composite shading pass --------------------------------------------------------------------------------------
 
-pub fn blit_pass(
+pub fn composite_pass(
     interface: &WebGPUInterface,
     _scene: &Shared<engine::scene::Scene>,
     command_encoder: &mut wgpu::CommandEncoder,
     view: &wgpu::TextureView,
     global_resources: &mut WebGPUUniqueResources,
 ) {
-    if global_resources.blit_shading_resource.is_none() {
-        global_resources.blit_shading_resource = Some(create_blit_shader_resource(&interface));
+    if global_resources.composite_shading_resource.is_none() {
+        global_resources.composite_shading_resource = Some(create_composite_shader_resource(&interface));
     }
 
-    let mut blit_shading_pass: wgpu::RenderPass<'_> =
+    let mut composite_shading_pass: wgpu::RenderPass<'_> =
         command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Blit shading pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -34,41 +34,41 @@ pub fn blit_pass(
             occlusion_query_set: None,
         });
 
-    blit_shading_pass.set_pipeline(
+    composite_shading_pass.set_pipeline(
         &global_resources
-            .blit_shading_resource
+            .composite_shading_resource
             .as_ref()
             .unwrap()
             .render_pipeline,
     );
-    blit_shading_pass.set_bind_group(
+    composite_shading_pass.set_bind_group(
         0,
         &global_resources
-            .blit_shading_resource
+            .composite_shading_resource
             .as_ref()
             .unwrap()
             .texture_bind_group,
         &[],
     );
-    blit_shading_pass.draw(0..3, 0..1);
+    composite_shading_pass.draw(0..3, 0..1);
 }
 
 // blit shader resource creation and update functions ----------------------------------------------------------------------------
 
-pub struct WebGPUBlitShadingResource {
+pub struct WebGPUCompositeShadingResource {
     pub _shader: wgpu::ShaderModule,
     pub texture_bind_group: wgpu::BindGroup,
     pub render_pipeline: wgpu::RenderPipeline,
 }
 
-fn create_blit_shader_resource(interface: &WebGPUInterface) -> WebGPUBlitShadingResource {
+fn create_composite_shader_resource(interface: &WebGPUInterface) -> WebGPUCompositeShadingResource {
     let shader: wgpu::ShaderModule =
         interface
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: None,
                 source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(
-                    "../shader/blit.wgsl"
+                    "../shader/composite.wgsl"
                 ))),
             });
 
@@ -174,7 +174,7 @@ fn create_blit_shader_resource(interface: &WebGPUInterface) -> WebGPUBlitShading
                 cache: None,
             });
 
-    return WebGPUBlitShadingResource {
+    return WebGPUCompositeShadingResource {
         _shader: shader,
         texture_bind_group: texture_bind_group,
         render_pipeline: render_pipeline,

@@ -132,20 +132,13 @@ fn fs_up_sampling_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
 
 @fragment
-fn fs_composite_main(@location(0) uv: vec2f) -> @location(0) vec4f 
+fn fs_resolve_main(@location(0) uv: vec2f) -> @location(0) vec4f 
 {
     let hdr_color   = textureSample(t_diffuse, s_diffuse, uv).rgb;
     let bloom_color = textureSample(t_bloom, s_diffuse, uv).rgb;
     
     // 1. 加算合成 (強度 0.4 で調整)
     var result = hdr_color + (bloom_color * 0.4);
-    
-    // 2. トーンマッピング (Reinhard法)
-    // これにより HDR(無限) の値を LDR(0.0-1.0) に収める
-    result = result / (result + vec3f(1.0));
-    
-    // 3. ガンマ補正 (sRGBモニター用)
-    result = pow(result, vec3f(1.0 / 2.2));
     
     return vec4f(result, 1.0);
 }

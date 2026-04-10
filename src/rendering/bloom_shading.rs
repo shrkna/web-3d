@@ -200,11 +200,11 @@ pub fn bloom_pass(
         }
     }
 
-    // Composite pass (intermediate 1 + bloom texture -> intermediate 2)
+    // Bloom resolve pass (intermediate 1 + bloom texture -> intermediate 2)
     {
-        let mut composite_pass: wgpu::RenderPass<'_> =
+        let mut resolve_pass: wgpu::RenderPass<'_> =
             command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Bloom composite shading pass"),
+                label: Some("Bloom resolve shading pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &interface
                         .intermediate_texture_2
@@ -220,25 +220,25 @@ pub fn bloom_pass(
                 occlusion_query_set: None,
             });
 
-        composite_pass.set_pipeline(
+        resolve_pass.set_pipeline(
             &global_resources
                 .bloom_shading_resource
                 .as_ref()
                 .unwrap()
-                .composite_render_pipeline,
+                .resolve_render_pipeline,
         );
 
-        composite_pass.set_bind_group(
+        resolve_pass.set_bind_group(
             0,
             &global_resources
                 .bloom_shading_resource
                 .as_ref()
                 .unwrap()
-                .composite_bind_group,
+                .resolve_bind_group,
             &[],
         );
 
-        composite_pass.draw(0..3, 0..1);
+        resolve_pass.draw(0..3, 0..1);
     }
 }
 
@@ -254,8 +254,8 @@ pub struct WebGPUbloomShadingResource {
     pub down_sampling_render_pipeline: wgpu::RenderPipeline,
     pub up_sampling_bind_groups: std::vec::Vec<wgpu::BindGroup>,
     pub up_sampling_render_pipeline: wgpu::RenderPipeline,
-    pub composite_bind_group: wgpu::BindGroup,
-    pub composite_render_pipeline: wgpu::RenderPipeline,
+    pub resolve_bind_group: wgpu::BindGroup,
+    pub resolve_render_pipeline: wgpu::RenderPipeline,
 }
 
 fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadingResource {
@@ -654,9 +654,9 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
             cache: None,
         });
 
-    // Composite shading pass
+    // Resolve shading pass
 
-    let composite_bind_group_layout: wgpu::BindGroupLayout = interface
+    let resolve_bind_group_layout: wgpu::BindGroupLayout = interface
         .device
         .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
@@ -690,14 +690,14 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
                     count: None,
                 },
             ],
-            label: Some("composite_bind_group_layout"),
+            label: Some("resolve_bind_group_layout"),
         });
 
-    let composite_bind_group: wgpu::BindGroup =
+    let resolve_bind_group: wgpu::BindGroup =
         interface
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &composite_bind_group_layout,
+                layout: &resolve_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
@@ -718,24 +718,24 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
                         ),
                     },
                 ],
-                label: Some("Bloom composite Bind Group"),
+                label: Some("Bloom resolve bind group"),
             });
 
-    let composite_pipeline_layout: wgpu::PipelineLayout =
+    let resolve_pipeline_layout: wgpu::PipelineLayout =
         interface
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[&composite_bind_group_layout],
+                bind_group_layouts: &[&resolve_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
-    let composite_render_pipeline: wgpu::RenderPipeline =
+    let resolve_render_pipeline: wgpu::RenderPipeline =
         interface
             .device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: None,
-                layout: Some(&composite_pipeline_layout),
+                layout: Some(&resolve_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
                     entry_point: Some(define::VS_ENTRY_POINT),
@@ -744,7 +744,7 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: Some("fs_composite_main"),
+                    entry_point: Some("fs_resolve_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: interface.intermediate_texture_2.format().into(),
@@ -774,7 +774,7 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
         down_sampling_render_pipeline,
         up_sampling_bind_groups,
         up_sampling_render_pipeline,
-        composite_bind_group,
-        composite_render_pipeline,
+        resolve_bind_group,
+        resolve_render_pipeline,
     };
 }

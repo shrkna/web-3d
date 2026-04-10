@@ -1,7 +1,7 @@
 use crate::engine::{self, define};
 use crate::rendering::common;
 use crate::rendering::{
-    blit_shading, bloom_shading, differed_shading, forward_shading, line_grid_shading,
+    composite_shading, bloom_shading, differed_shading, forward_shading, line_grid_shading,
 };
 use crate::types::Shared;
 use wasm_bindgen::JsCast;
@@ -58,7 +58,7 @@ pub struct WebGPUUniqueResources {
     pub differed_shading_resource: Option<differed_shading::WebGPUDifferedShadingResource>,
     pub line_grid_shading_resource: Option<line_grid_shading::WebGPULineGridShadingResource>,
     pub bloom_shading_resource: Option<bloom_shading::WebGPUbloomShadingResource>,
-    pub blit_shading_resource: Option<blit_shading::WebGPUBlitShadingResource>,
+    pub composite_shading_resource: Option<composite_shading::WebGPUCompositeShadingResource>,
 }
 
 // Webgpu Contexts -----------------------------------------------------------------------------
@@ -280,9 +280,10 @@ pub fn update_rendering_main(
         );
     }
 
-    // Blit pass
+    // [Post-process] Composite pass
+    if true
     {
-        blit_shading::blit_pass(
+        composite_shading::composite_pass(
             &interface,
             &scene,
             &mut main_command_encoder,

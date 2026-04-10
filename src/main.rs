@@ -74,7 +74,7 @@ pub async fn main() {
             differed_shading_resource: None,
             line_grid_shading_resource: None,
             bloom_shading_resource: None,
-            blit_shading_resource: None,
+            composite_shading_resource: None,
         }));
 
     // Initialize control response JS object and event listener
