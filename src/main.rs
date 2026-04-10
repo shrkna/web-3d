@@ -3,7 +3,7 @@ mod rendering;
 mod types;
 mod web;
 
-use crate::rendering::webgpu::{self};
+use crate::rendering::webgpu::{self, WebGPUUniqueResources};
 use crate::types::Shared;
 use std::cell::RefCell;
 use wasm_bindgen::JsCast;
@@ -68,11 +68,14 @@ pub async fn main() {
         rendering::webgpu::WebGPUShaderContext,
     > = std::collections::HashMap::new();
 
-    // Global mesh rendering resources
-    let mut global_resource_map: std::collections::HashMap<
-        std::string::String,
-        rendering::webgpu::WebGPUMeshRenderingResource,
-    > = std::collections::HashMap::new();
+    // Global unique resources that are shared in the whole rendering process. It is created once and shared between objects.
+    let mut global_resources: Shared<WebGPUUniqueResources> =
+        Shared::new(RefCell::new(WebGPUUniqueResources {
+            differed_shading_resource: None,
+            line_grid_shading_resource: None,
+            bloom_shading_resource: None,
+            blit_shading_resource: None,
+        }));
 
     // Initialize control response JS object and event listener
     let control_response_js: Shared<web::eventlistener::ControlResponseJs> = Shared::new(
@@ -93,7 +96,7 @@ pub async fn main() {
             &webgpu_interface,
             &scene,
             &mut shader_map,
-            &mut global_resource_map,
+            &mut global_resources,
         );
 
         if scene.borrow().variables.is_first_update {

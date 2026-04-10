@@ -15,8 +15,7 @@ struct Uniform
 }
 
 @group(0) @binding(0) var<uniform> in_uniform         : Uniform;
-@group(1) @binding(0) var          render_texture     : texture_2d<f32>;
-@group(1) @binding(1) var          depth_texture      : texture_depth_2d;
+@group(1) @binding(0) var          depth_texture      : texture_depth_2d;
 
 @vertex
 fn vs_main( @builtin(vertex_index) vertex_index : u32 ) -> VertexOutput
@@ -37,7 +36,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     let texel_coord = vec2<i32>(in.position.xy);
     let depth       = textureLoad(depth_texture, texel_coord, 0);
 
-    let ndc          = vec4f(in.uv * 2.0 - 1.0, 1.0, 1.0);
+    let ndc          = vec4f(in.uv * 2.0 - 1.0, depth, 1.0);
     let view_target  = in_uniform.inv_view_matrix * in_uniform.inv_projection_matrix * ndc;
     let ray_dir      = normalize(view_target.xyz / view_target.w - in_uniform.camera_position.xyz);
 
@@ -47,6 +46,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 
     // 平面がカメラの後ろにある場合、または平行な場合は描画しない
     if (t <= 0.0) { discard; }
+    // depthを見て交差しない場合は描画しない
+    if (in_uniform.camera_position.z * view_target.z > 0) {discard; }
 
     let world_pos = in_uniform.camera_position.xyz + ray_dir * t;
     let coord     = world_pos.xy;

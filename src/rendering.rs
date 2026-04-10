@@ -1,2 +1,7 @@
+pub mod blit_shading;
+pub mod bloom_shading;
 pub mod common;
+pub mod differed_shading;
+pub mod forward_shading;
+pub mod line_grid_shading;
 pub mod webgpu;

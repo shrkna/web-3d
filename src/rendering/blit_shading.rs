@@ -1,0 +1,182 @@
+use crate::engine;
+use crate::engine::define;
+use crate::rendering::webgpu::{
+    WebGPUInterface, WebGPUUniqueResources, WEBGPU_CULL_MODE, WEBGPU_FRONT_FACE,
+};
+use crate::Shared;
+
+// blit shading pass --------------------------------------------------------------------------------------
+
+pub fn blit_pass(
+    interface: &WebGPUInterface,
+    _scene: &Shared<engine::scene::Scene>,
+    command_encoder: &mut wgpu::CommandEncoder,
+    view: &wgpu::TextureView,
+    global_resources: &mut WebGPUUniqueResources,
+) {
+    if global_resources.blit_shading_resource.is_none() {
+        global_resources.blit_shading_resource = Some(create_blit_shader_resource(&interface));
+    }
+
+    let mut blit_shading_pass: wgpu::RenderPass<'_> =
+        command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Blit shading pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+
+    blit_shading_pass.set_pipeline(
+        &global_resources
+            .blit_shading_resource
+            .as_ref()
+            .unwrap()
+            .render_pipeline,
+    );
+    blit_shading_pass.set_bind_group(
+        0,
+        &global_resources
+            .blit_shading_resource
+            .as_ref()
+            .unwrap()
+            .texture_bind_group,
+        &[],
+    );
+    blit_shading_pass.draw(0..3, 0..1);
+}
+
+// blit shader resource creation and update functions ----------------------------------------------------------------------------
+
+pub struct WebGPUBlitShadingResource {
+    pub _shader: wgpu::ShaderModule,
+    pub texture_bind_group: wgpu::BindGroup,
+    pub render_pipeline: wgpu::RenderPipeline,
+}
+
+fn create_blit_shader_resource(interface: &WebGPUInterface) -> WebGPUBlitShadingResource {
+    let shader: wgpu::ShaderModule =
+        interface
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: None,
+                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(
+                    "../shader/blit.wgsl"
+                ))),
+            });
+
+    let texture_bind_group_layout =
+        interface
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    // Intermediate texture
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 00,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    // Intermediate texture sampler
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            });
+
+    let texture_bind_group: wgpu::BindGroup =
+        interface
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(
+                            &interface
+                                .intermediate_texture
+                                .create_view(&wgpu::TextureViewDescriptor::default()),
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&interface.device.create_sampler(
+                            &wgpu::SamplerDescriptor {
+                                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                                mag_filter: wgpu::FilterMode::Linear,
+                                min_filter: wgpu::FilterMode::Nearest,
+                                mipmap_filter: wgpu::FilterMode::Nearest,
+                                ..Default::default()
+                            },
+                        )),
+                    },
+                ],
+                label: Some("Line Grid Texture Bind Group"),
+            });
+
+    let pipeline_layout: wgpu::PipelineLayout =
+        interface
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[&texture_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+    let render_pipeline: wgpu::RenderPipeline =
+        interface
+            .device
+            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: None,
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some(define::VS_ENTRY_POINT),
+                    compilation_options: Default::default(),
+                    buffers: &[],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some(define::FS_ENTRY_POINT),
+                    compilation_options: Default::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: interface.swapchain_format.into(),
+                        blend: None,
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    front_face: WEBGPU_FRONT_FACE,
+                    cull_mode: Some(WEBGPU_CULL_MODE),
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    ..Default::default()
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                multiview: None,
+                cache: None,
+            });
+
+    return WebGPUBlitShadingResource {
+        _shader: shader,
+        texture_bind_group: texture_bind_group,
+        render_pipeline: render_pipeline,
+    };
+}
