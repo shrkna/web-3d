@@ -15,7 +15,8 @@ pub fn composite_pass(
     global_resources: &mut WebGPUUniqueResources,
 ) {
     if global_resources.composite_shading_resource.is_none() {
-        global_resources.composite_shading_resource = Some(create_composite_shader_resource(&interface));
+        global_resources.composite_shading_resource =
+            Some(create_composite_shader_resource(&interface));
     }
 
     let mut composite_shading_pass: wgpu::RenderPass<'_> =

@@ -1,6 +1,5 @@
 use crate::types::Shared;
 use crate::{rendering, web};
-use glam::Vec4Swizzles;
 
 // Scene definision
 
@@ -185,9 +184,8 @@ pub fn update_control(
     let mut control_event_js = in_control_event.borrow_mut();
 
     // Calculate eye direction (rotation)
-    let on_click: bool = control_event_js.on_click;
-    let on_shift: bool = control_event_js.on_shift;
-    if on_click && !on_shift {
+    let on_right_click: bool = control_event_js.on_right_click;
+    if on_right_click {
         let rotate_x_mat =
             glam::Mat3::from_rotation_z(-1.0 * control_event_js.movement_x as f32 * 0.005);
         direction = rotate_x_mat.mul_vec3(direction);
@@ -198,25 +196,36 @@ pub fn update_control(
         let rotate_y_quat =
             glam::Quat::from_axis_angle(y_axis, -1.0 * control_event_js.movement_y as f32 * 0.005);
         direction = rotate_y_quat.mul_vec3(direction);
-    } else if on_click && on_shift {
-        let direction_mat: glam::Mat4 = glam::Mat4::from_translation(direction);
-        let up_move_vec: glam::Vec4 = direction_mat.mul_vec4(glam::Vec4::Z).normalize();
-        let right_move_vec: glam::Vec4 = direction_mat.mul_vec4(glam::Vec4::Y).normalize();
-        eye += -1.0 * up_move_vec.xyz() * control_event_js.movement_y as f32 * 0.01;
-        eye += 1.0 * right_move_vec.xyz() * control_event_js.movement_x as f32 * 0.01;
     }
 
     // Calculate eye location
     let on_wheel = control_event_js.on_wheel;
+    let on_w = control_event_js.on_w;
+    let on_s = control_event_js.on_s;
+    let on_a = control_event_js.on_a;
+    let on_d = control_event_js.on_d;
     if on_wheel {
         eye += -1.0 * direction.normalize() * control_event_js.wheel_delta_y as f32 * 0.005;
+    }
+    if on_w {
+        eye += direction.normalize() * 0.05;
+    }
+    if on_s {
+        eye -= direction.normalize() * 0.05;
+    }
+    if on_a {
+        eye -= direction.normalize().cross(glam::Vec3::Z).normalize() * 0.05;
+    }
+    if on_d {
+        eye += direction.normalize().cross(glam::Vec3::Z).normalize() * 0.05;
     }
 
     // Update
     scene_value.variables.eye_location = eye;
     scene_value.variables.eye_direction = direction;
 
-    // Event context override
-    control_event_js.on_click = false;
+    // Event context initialize
+    control_event_js.on_left_click = false;
+    control_event_js.on_right_click = false;
     control_event_js.on_wheel = false;
 }

@@ -1,7 +1,7 @@
 use crate::engine::{self, define};
 use crate::rendering::common;
 use crate::rendering::{
-    composite_shading, bloom_shading, differed_shading, forward_shading, line_grid_shading,
+    bloom_shading, composite_shading, differed_shading, forward_shading, line_grid_shading,
 };
 use crate::types::Shared;
 use wasm_bindgen::JsCast;
@@ -281,8 +281,7 @@ pub fn update_rendering_main(
     }
 
     // [Post-process] Composite pass
-    if true
-    {
+    if true {
         composite_shading::composite_pass(
             &interface,
             &scene,
