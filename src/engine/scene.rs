@@ -1,16 +1,17 @@
 use crate::types::Shared;
 use crate::{rendering, web};
 
-// Scene definision
+// Scene world
 
 #[derive(Clone)]
 pub struct Scene {
-    // own
     pub objects: Vec<SceneObject>,
     pub materials: Vec<SceneMaterial>,
     pub batched_objects: Vec<SceneObject>,
-    pub variables: SceneVariables,
+    pub parameters: SceneParameter,
 }
+
+// Scene obects
 
 #[derive(Clone, Default)]
 pub struct SceneObject {
@@ -35,31 +36,40 @@ pub struct SceneMaterial {
     pub metallic_roughness_texture_size: [u32; 2],
 }
 
+// Scene parameters
+
 #[derive(Clone)]
-pub struct SceneVariables {
-    // rendering variables
+pub struct SceneParameter {
+    // camera
     pub eye_location: glam::Vec3,
     pub eye_direction: glam::Vec3,
+    // light
     pub directional_light_angle: [f32; 3],
     pub ambient_light_color: [f32; 4],
     pub background_color: [f32; 4],
+    // rendering config
     pub scene_shading_type: ShadingType,
     pub forward_debug_type: u8,
     pub differed_debug_type: u8,
-    // config
+    // postprocess
+    pub is_use_bloom: bool,
+    pub bloom_threshold: f32,
+    pub is_use_composite: bool,
+    pub is_use_tone_mapping: bool,
+    pub is_use_gamma_correction: bool,
+    // other config
     pub is_first_update: bool,
-    pub convert_y_to_z: bool,
-    pub _use_batched: bool,
+    pub is_convert_y_to_z: bool,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub enum ShadingType {
     #[default]
     Forward,
     Differed,
 }
 
-// Initialize builder
+// Initializer
 
 impl Scene {
     pub fn new() -> Self {
@@ -67,14 +77,15 @@ impl Scene {
             objects: [].to_vec(),
             batched_objects: [].to_vec(),
             materials: [].to_vec(),
-            variables: SceneVariables::new(),
+            parameters: SceneParameter::new(),
         }
     }
 }
 
-impl SceneVariables {
+impl SceneParameter {
     pub fn new() -> Self {
         Self {
+            // camera
             eye_location: glam::Vec3 {
                 x: 0.0,
                 y: -2.0,
@@ -85,20 +96,29 @@ impl SceneVariables {
                 y: 2.0,
                 z: -1.0,
             },
+            // light
             directional_light_angle: [0.5, 1.0, -1.0],
             ambient_light_color: [0.0, 0.0, 0.0, 1.0],
             background_color: [0.0, 0.0, 0.0, 1.0],
+            // rendering
             scene_shading_type: ShadingType::Differed,
             forward_debug_type: 0,
             differed_debug_type: 0,
+            // postprocess
+            is_use_bloom: true,
+            bloom_threshold: 1.0,
+            is_use_composite: true,
+            is_use_tone_mapping: true,
+            is_use_gamma_correction: true,
+            // other config
             is_first_update: false,
-            convert_y_to_z: true,
-            _use_batched: false,
+            is_convert_y_to_z: true,
         }
     }
 }
 
-// Utilities
+// Scene utilities
+
 #[allow(dead_code)]
 pub fn batch_objects(scene: &Shared<Scene>) {
     scene.borrow_mut().batched_objects = [].to_vec();
@@ -173,19 +193,20 @@ pub fn batch_objects(scene: &Shared<Scene>) {
     }
 }
 
-pub fn update_control(
+pub fn update_camera_control(
     scene: &Shared<Scene>,
     in_control_event: &Shared<web::eventlistener::ControlResponseJs>,
 ) {
     let mut scene_value = scene.borrow_mut();
-    let mut eye: glam::Vec3 = scene_value.variables.eye_location;
-    let mut direction: glam::Vec3 = scene_value.variables.eye_direction;
+    let mut eye: glam::Vec3 = scene_value.parameters.eye_location;
+    let mut direction: glam::Vec3 = scene_value.parameters.eye_direction;
 
     let mut control_event_js = in_control_event.borrow_mut();
 
     // Calculate eye direction (rotation)
+    let on_left_click: bool = control_event_js.on_left_click;
     let on_right_click: bool = control_event_js.on_right_click;
-    if on_right_click {
+    if on_right_click || on_left_click {
         let rotate_x_mat =
             glam::Mat3::from_rotation_z(-1.0 * control_event_js.movement_x as f32 * 0.005);
         direction = rotate_x_mat.mul_vec3(direction);
@@ -221,8 +242,8 @@ pub fn update_control(
     }
 
     // Update
-    scene_value.variables.eye_location = eye;
-    scene_value.variables.eye_direction = direction;
+    scene_value.parameters.eye_location = eye;
+    scene_value.parameters.eye_direction = direction;
 
     // Event context initialize
     control_event_js.on_left_click = false;

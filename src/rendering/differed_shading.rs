@@ -232,10 +232,10 @@ pub fn differed_shading_pass(
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: scene_value.variables.background_color[0] as f64,
-                                g: scene_value.variables.background_color[1] as f64,
-                                b: scene_value.variables.background_color[2] as f64,
-                                a: scene_value.variables.background_color[3] as f64,
+                                r: scene_value.parameters.background_color[0] as f64,
+                                g: scene_value.parameters.background_color[1] as f64,
+                                b: scene_value.parameters.background_color[2] as f64,
+                                a: scene_value.parameters.background_color[3] as f64,
                             }),
                             store: wgpu::StoreOp::Store,
                         },
@@ -245,7 +245,7 @@ pub fn differed_shading_pass(
                     occlusion_query_set: None,
                 });
 
-            if scene_value.variables.differed_debug_type == 0 {
+            if scene_value.parameters.differed_debug_type == 0 {
                 differed_shading_pass.set_pipeline(
                     &global_resources
                         .differed_shading_resource
@@ -718,13 +718,13 @@ fn update_differed_gbuffer_shading_resource(
         let aspect_ratio: f32 = width as f32 / height as f32;
 
         let scene_value = scene.borrow();
-        let eye: glam::Vec3 = scene_value.variables.eye_location;
-        let direction: glam::Vec3 = scene_value.variables.eye_direction;
+        let eye: glam::Vec3 = scene_value.parameters.eye_location;
+        let direction: glam::Vec3 = scene_value.parameters.eye_direction;
 
         let mut model_matrix = glam::Mat4::from_cols_array_2d(&object.world_transform);
 
         // Force Y-up to Z-up
-        if scene_value.variables.convert_y_to_z {
+        if scene_value.parameters.is_convert_y_to_z {
             let y_to_z_mat: glam::Mat4 = glam::Mat4::from_axis_angle(
                 glam::Vec3::new(1.0, 0.0, 0.0),
                 std::f32::consts::PI / 2.0,
@@ -1092,8 +1092,8 @@ fn update_differed_shading_buffer(
 
     let scene_value = scene.borrow();
 
-    let eye: glam::Vec3 = scene_value.variables.eye_location;
-    let direction: glam::Vec3 = scene_value.variables.eye_direction;
+    let eye: glam::Vec3 = scene_value.parameters.eye_location;
+    let direction: glam::Vec3 = scene_value.parameters.eye_direction;
 
     // Create matrices and write buffer
     let view_matrix = glam::Mat4::look_to_rh(eye, direction, glam::Vec3::Z);
@@ -1101,8 +1101,8 @@ fn update_differed_shading_buffer(
         glam::Mat4::perspective_rh(std::f32::consts::FRAC_PI_4, aspect_ratio, 0.01, 100.0);
     let transform_matrix: glam::Mat4 = projection_matrix * view_matrix;
 
-    let directional: [f32; 3] = scene_value.variables.directional_light_angle;
-    let ambient: [f32; 4] = scene_value.variables.ambient_light_color;
+    let directional: [f32; 3] = scene_value.parameters.directional_light_angle;
+    let ambient: [f32; 4] = scene_value.parameters.ambient_light_color;
     let inverse_projection: glam::Mat4 = transform_matrix.inverse();
 
     let mut uniform_total: Vec<f32> = Vec::new();
@@ -1111,7 +1111,7 @@ fn update_differed_shading_buffer(
     uniform_total.extend_from_slice(&ambient);
     uniform_total.extend_from_slice(&inverse_projection.to_cols_array().to_vec());
     uniform_total.extend_from_slice(&[
-        scene_value.variables.differed_debug_type as f32,
+        scene_value.parameters.differed_debug_type as f32,
         0.0,
         0.0,
         0.0,

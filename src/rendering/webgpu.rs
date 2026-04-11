@@ -238,7 +238,7 @@ pub fn update_rendering_main(
 
     // Main pass (forward or differed)
     {
-        let shading_type: engine::scene::ShadingType = scene.borrow().variables.scene_shading_type;
+        let shading_type: engine::scene::ShadingType = scene.borrow().parameters.scene_shading_type;
         match shading_type {
             engine::scene::ShadingType::Forward => {
                 forward_shading::forward_shading_pass(
@@ -264,7 +264,7 @@ pub fn update_rendering_main(
     }
 
     // [Post-process] Bloom pass
-    if true {
+    if scene.borrow().parameters.is_use_bloom {
         bloom_shading::bloom_pass(
             &interface,
             &scene,
@@ -281,7 +281,7 @@ pub fn update_rendering_main(
     }
 
     // [Post-process] Composite pass
-    if true {
+    if scene.borrow().parameters.is_use_composite {
         composite_shading::composite_pass(
             &interface,
             &scene,

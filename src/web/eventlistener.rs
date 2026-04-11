@@ -124,7 +124,6 @@ pub fn add_event_listener_control(event_response: &Shared<ControlResponseJs>) {
             borrowed.on_s = false;
             borrowed.on_w = false;
             borrowed.on_shift = false;
-            log::debug!("Context menu event");
         }) as Box<dyn FnMut(_)>);
 
     canvas
@@ -152,7 +151,11 @@ pub fn add_event_listener_control(event_response: &Shared<ControlResponseJs>) {
         .unwrap();
     blur_closure.forget();
 
-    window.add_event_listener_with_callback("contextmenu", context_menu_closure.as_ref().unchecked_ref())
+    window
+        .add_event_listener_with_callback(
+            "contextmenu",
+            context_menu_closure.as_ref().unchecked_ref(),
+        )
         .unwrap();
     context_menu_closure.forget();
 }

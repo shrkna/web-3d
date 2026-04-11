@@ -255,8 +255,8 @@ fn update_line_grid_shader_resource(
 
     let scene_value = scene.borrow();
 
-    let eye: glam::Vec3 = scene_value.variables.eye_location;
-    let direction: glam::Vec3 = scene_value.variables.eye_direction;
+    let eye: glam::Vec3 = scene_value.parameters.eye_location;
+    let direction: glam::Vec3 = scene_value.parameters.eye_direction;
 
     let inv_view_matrix = glam::Mat4::look_to_rh(eye, direction, glam::Vec3::Z).inverse();
     let inv_projection_matrix: glam::Mat4 =

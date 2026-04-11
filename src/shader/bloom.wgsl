@@ -4,9 +4,15 @@ struct VertexOutput
     @location(0)       uv         : vec2<f32>
 };
 
+struct BloomUniform
+{
+	threshold : f32
+}
+
 @group(0) @binding(0) var 		   t_diffuse     		    : texture_2d<f32>;
 @group(0) @binding(1) var 		   s_diffuse     		    : sampler;
 @group(0) @binding(2) var 		   t_bloom					: texture_2d<f32>;
+@group(1) @binding(0) var<uniform> u_bloom					: BloomUniform;				
 
 
 // 輝度計算（Rec.709）
@@ -36,22 +42,21 @@ fn vs_main( @builtin(vertex_index) vertex_index : u32 ) -> VertexOutput
     return out;
 }
 
+
 @fragment
 fn fs_extraction_main(@location(0) uv: vec2f) -> @location(0) vec4f 
 {
 	let color = textureSample(t_diffuse, s_diffuse, uv).rgb;
     
     // 輝度の計算 (Rec.709 係数)
-    let brightness = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+    let brightness = luminance(color);
     
-    // 閾値 (1.0) を超えた成分だけを抽出
-    // 1.0以下を完全にカットすることで、光らせたい場所だけを制御できる
-    if (brightness > 1.0) 
-	{
-        return vec4f(color, 1.0);
-    }
-    return vec4f(0.0, 0.0, 0.0, 1.0);
+    // 設定された閾値 (u_bloom.threshold) を超えた成分だけを抽出
+    // 閾値以下を完全にカットすることで、光らせたい場所だけを制御できる
+	let mask = step(u_bloom.threshold, brightness);
+	return vec4f(color * mask, mask);
 }
+
 
 @fragment
 fn fs_down_sampling_main(@location(0) uv: vec2f) -> @location(0) vec4f 
@@ -101,11 +106,12 @@ fn fs_down_sampling_main(@location(0) uv: vec2f) -> @location(0) vec4f
     return vec4f(result, 1.0);
 }
 
+
 @fragment
 fn fs_up_sampling_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     // ぼかしの半径（フィルタの広がり）。通常は0.005前後
     // 解像度に合わせて調整可能ですが、固定値でも十分綺麗にボケます
-    let d = 0.005;
+    let d = 0.001;
     
     // 3x3のテントフィルターサンプリング
     // [a][b][c]

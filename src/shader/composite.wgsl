@@ -4,8 +4,15 @@ struct VertexOutput
     @location(0)       uv         : vec2<f32>
 };
 
-@group(0) @binding(0) var intermediate_texture      : texture_2d<f32>;
-@group(0) @binding(1) var intermediate_sampler      : sampler;
+struct CompositeUniform
+{
+    is_use_tone_mapping     : f32,
+    is_use_gamma_correction : f32,
+}
+
+@group(0) @binding(0) var           t_scene      : texture_2d<f32>;
+@group(0) @binding(1) var           s_scene      : sampler;
+@group(1) @binding(0) var<uniform>  u_composite  : CompositeUniform;
 
 fn tonemap_aces(x: vec3f) -> vec3f 
 {
@@ -34,13 +41,13 @@ fn vs_main( @builtin(vertex_index) vertex_index : u32 ) -> VertexOutput
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f 
 {
     // 中間テクスチャの色をそのままサンプリング
-    let color = textureSample(intermediate_texture, intermediate_sampler, uv);
+    let color = textureSample(t_scene, s_scene, uv);
     
     // トーンマッピング
-    var mapped = tonemap_aces(color.xyz);
+    var mapped = mix(color.xyz, tonemap_aces(color.xyz), u_composite.is_use_tone_mapping);
 
     // ガンマ補正 (Gamma Correction)
-    let final_result = pow(mapped, vec3f(1.0 / 2.2));
+    let final_result = mix(mapped, pow(mapped, vec3f(1.0 / 2.2)), u_composite.is_use_gamma_correction);
 
     return vec4(final_result, 1.0);
 }

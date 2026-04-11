@@ -90,7 +90,7 @@ pub async fn main() {
     let f: Shared<Option<_>> = Shared::new(RefCell::new(None));
     let g: Shared<Option<_>> = f.clone();
     *g.borrow_mut() = Some(wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-        engine::scene::update_control(&scene, &control_response_js);
+        engine::scene::update_camera_control(&scene, &control_response_js);
 
         rendering::webgpu::update_rendering_main(
             &webgpu_interface,
@@ -99,8 +99,8 @@ pub async fn main() {
             &mut global_resources,
         );
 
-        if scene.borrow().variables.is_first_update {
-            scene.borrow_mut().variables.is_first_update = false;
+        if scene.borrow().parameters.is_first_update {
+            scene.borrow_mut().parameters.is_first_update = false;
             debug_log_with_time("Render OK");
         }
         request_animation_frame(f.borrow().as_ref().unwrap());

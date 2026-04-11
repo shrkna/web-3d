@@ -9,7 +9,7 @@ use crate::Shared;
 
 pub fn composite_pass(
     interface: &WebGPUInterface,
-    _scene: &Shared<engine::scene::Scene>,
+    scene: &Shared<engine::scene::Scene>,
     command_encoder: &mut wgpu::CommandEncoder,
     view: &wgpu::TextureView,
     global_resources: &mut WebGPUUniqueResources,
@@ -18,6 +18,8 @@ pub fn composite_pass(
         global_resources.composite_shading_resource =
             Some(create_composite_shader_resource(&interface));
     }
+
+    update_composite_uniform_buffer(&interface, &scene, global_resources);
 
     let mut composite_shading_pass: wgpu::RenderPass<'_> =
         command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -51,15 +53,30 @@ pub fn composite_pass(
             .texture_bind_group,
         &[],
     );
+    composite_shading_pass.set_bind_group(
+        1,
+        &global_resources
+            .composite_shading_resource
+            .as_ref()
+            .unwrap()
+            .uniform_bind_group,
+        &[],
+    );
     composite_shading_pass.draw(0..3, 0..1);
 }
 
 // blit shader resource creation and update functions ----------------------------------------------------------------------------
-
 pub struct WebGPUCompositeShadingResource {
     pub _shader: wgpu::ShaderModule,
+    pub uniform_buffer: wgpu::Buffer,
     pub texture_bind_group: wgpu::BindGroup,
+    pub uniform_bind_group: wgpu::BindGroup,
     pub render_pipeline: wgpu::RenderPipeline,
+}
+
+pub struct CompositeUniformBuffer{
+    pub _is_use_tone_mapping: f32,
+    pub _is_use_gamma_correction: f32,
 }
 
 fn create_composite_shader_resource(interface: &WebGPUInterface) -> WebGPUCompositeShadingResource {
@@ -131,13 +148,58 @@ fn create_composite_shader_resource(interface: &WebGPUInterface) -> WebGPUCompos
                 ],
                 label: Some("Line Grid Texture Bind Group"),
             });
+    
+    let uniform_buffer = interface.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Composite Uniform Buffer"),
+        size: std::mem::size_of::<CompositeUniformBuffer>() as u64,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+
+    let uniform_bind_group_layout =
+        interface
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    // Composite uniform buffer
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+                label: Some("composite_uniform_bind_group_layout"),
+            });
+    
+    let uniform_bind_group: wgpu::BindGroup =
+        interface
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &uniform_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: &uniform_buffer,
+                            offset: 0,
+                            size: None,
+                        }),
+                    },
+                ],
+                label: Some("composite_uniform_bind_group"),
+            });
 
     let pipeline_layout: wgpu::PipelineLayout =
         interface
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &uniform_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -177,7 +239,36 @@ fn create_composite_shader_resource(interface: &WebGPUInterface) -> WebGPUCompos
 
     return WebGPUCompositeShadingResource {
         _shader: shader,
+        uniform_buffer: uniform_buffer,
         texture_bind_group: texture_bind_group,
+        uniform_bind_group: uniform_bind_group,
         render_pipeline: render_pipeline,
     };
+}
+
+fn update_composite_uniform_buffer(
+    interface: &WebGPUInterface,
+    scene: &Shared<engine::scene::Scene>,
+    global_resources: &mut WebGPUUniqueResources,
+) {
+    let is_use_tone_mapping: f32 = if scene.borrow().parameters.is_use_tone_mapping {
+        1.0
+    } else {
+        0.0
+    };
+
+    let is_use_gamma_correction: f32 = if scene.borrow().parameters.is_use_gamma_correction {
+        1.0
+    } else {
+        0.0
+    };
+    interface.queue.write_buffer(
+        &global_resources
+            .composite_shading_resource
+            .as_ref()
+            .unwrap()
+            .uniform_buffer,
+        0,
+        bytemuck::cast_slice(&[is_use_tone_mapping, is_use_gamma_correction]),
+    );
 }
