@@ -26,6 +26,9 @@ fn create_debug_dialog(scene: &Shared<engine::scene::Scene>) {
     // Postprocess dialog
     create_debug_dialog_postprocess(&dialog_wrapper, &scene);
 
+    // Overlay dialog
+    create_debug_dialog_overlay(&dialog_wrapper, &scene);
+
     // Statistics dialog
     create_debug_dialog_statistics(&dialog_wrapper, &scene);
 
@@ -1592,6 +1595,158 @@ fn create_debug_dialog_postprocess(
         .unwrap();
 
     parent.append_child(&view_statistics).unwrap();
+}
+
+fn create_debug_dialog_overlay(
+    parent: &web_sys::Element,
+    scene: &Shared<engine::scene::Scene>,
+) {
+    let scene_value = scene.borrow();
+
+    let dialog_overlay = gloo::utils::document().create_element("div").unwrap();
+    dialog_overlay.set_id("dialog-element-overlay");
+    dialog_overlay.set_class_name("dialog-element dialog-element-display");
+
+    let accordion_input_element = gloo::utils::document().create_element("input").unwrap();
+    let accordion_input_element: web_sys::HtmlInputElement =
+        accordion_input_element.dyn_into().unwrap();
+    accordion_input_element
+        .set_attribute("type", "checkbox")
+        .unwrap();
+    accordion_input_element.set_class_name("accordion-input");
+    accordion_input_element.set_id("accordion-overlay");
+    // accordion_input_element.set_checked(true);
+
+    let accordion_label_element = gloo::utils::document().create_element("label").unwrap();
+    accordion_label_element.set_class_name("accordion-label");
+    accordion_label_element.set_text_content(Some("Overlay"));
+    accordion_label_element
+        .set_attribute("for", "accordion-overlay")
+        .unwrap();
+
+    let accordion_content_element = gloo::utils::document().create_element("div").unwrap();
+    accordion_content_element.set_class_name("accordion-content");
+
+    // grid
+    {
+        let grid_accordion_input_element =
+            gloo::utils::document().create_element("input").unwrap();
+        let grid_accordion_input_element: web_sys::HtmlInputElement =
+            grid_accordion_input_element.dyn_into().unwrap();
+        grid_accordion_input_element
+            .set_attribute("type", "checkbox")
+            .unwrap();
+        grid_accordion_input_element.set_class_name("accordion-input");
+        grid_accordion_input_element.set_id("accordion-grid");
+        //grid_accordion_input_element.set_checked(true);
+
+        let grid_accordion_label_element =
+            gloo::utils::document().create_element("label").unwrap();
+        grid_accordion_label_element.set_class_name("accordion-label inner-accordion-label");
+        grid_accordion_label_element.set_text_content(Some("Grid"));
+        grid_accordion_label_element
+            .set_attribute("for", "accordion-grid")
+            .unwrap();
+
+        let grid_accordion_content_element =
+            gloo::utils::document().create_element("div").unwrap();
+        grid_accordion_content_element.set_class_name("accordion-content inner-accordion-content");
+
+        // active
+        {
+            let grid_active_element: web_sys::Element =
+                gloo::utils::document().create_element("div").unwrap();
+            grid_active_element.set_class_name("widget-row");
+
+            let grid_active_label_element: web_sys::Element =
+                gloo::utils::document().create_element("div").unwrap();
+            grid_active_label_element.set_class_name("widget-label");
+            grid_active_label_element.set_text_content(Some("Active"));
+
+            let grid_active_content_element =
+                gloo::utils::document().create_element("div").unwrap();
+            grid_active_content_element.set_class_name("widget-value");
+
+            {
+                let grid_active_input_checkbox: web_sys::Element =
+                    gloo::utils::document().create_element("input").unwrap();
+                let grid_active_input_checkbox: web_sys::HtmlInputElement =
+                    grid_active_input_checkbox.dyn_into().unwrap();
+                grid_active_input_checkbox.set_id("grid-active");
+                grid_active_input_checkbox.set_class_name("checkbox-element");
+                grid_active_input_checkbox
+                    .set_attribute("type", "checkbox")
+                    .unwrap();
+                grid_active_input_checkbox.set_checked(scene_value.parameters.is_use_grid);
+
+                {
+                    let scene_clone: Shared<engine::scene::Scene> = scene.clone();
+
+                    let grid_active_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
+                        wasm_bindgen::closure::Closure::wrap(Box::new(
+                            move |_event: web_sys::InputEvent| {
+                                let grid_active_element: web_sys::Element =
+                                    gloo::utils::document()
+                                        .get_element_by_id("grid-active")
+                                        .unwrap();
+                                let grid_active_element: web_sys::HtmlInputElement =
+                                    grid_active_element.dyn_into().unwrap();
+                                let value: bool = grid_active_element.checked();
+
+                                let mut scene_value = scene_clone.borrow_mut();
+                                scene_value.parameters.is_use_grid = value;
+                            },
+                        )
+                            as Box<dyn FnMut(_)>);
+
+                    grid_active_input_checkbox
+                        .add_event_listener_with_callback(
+                            "input",
+                            grid_active_closure.as_ref().unchecked_ref(),
+                        )
+                        .unwrap();
+                    grid_active_closure.forget();
+                }
+
+                grid_active_content_element
+                    .append_child(&grid_active_input_checkbox)
+                    .unwrap();
+            }
+
+            grid_active_element
+                .append_child(&grid_active_label_element)
+                .unwrap();
+            grid_active_element
+                .append_child(&grid_active_content_element)
+                .unwrap();
+
+            grid_accordion_content_element
+                .append_child(&grid_active_element)
+                .unwrap();
+        }
+
+        accordion_content_element
+            .append_child(&grid_accordion_input_element)
+            .unwrap();
+        accordion_content_element
+            .append_child(&grid_accordion_label_element)
+            .unwrap();
+        accordion_content_element
+            .append_child(&grid_accordion_content_element)
+            .unwrap();
+    }
+
+    dialog_overlay
+        .append_child(&accordion_input_element)
+        .unwrap();
+    dialog_overlay
+        .append_child(&accordion_label_element)
+        .unwrap();
+    dialog_overlay
+        .append_child(&accordion_content_element)
+        .unwrap();
+
+    parent.append_child(&dialog_overlay).unwrap();
 }
 
 fn create_debug_dialog_statistics(parent: &web_sys::Element, scene: &Shared<engine::scene::Scene>) {

@@ -334,13 +334,15 @@ pub fn update_rendering_main(
 
     // [Overlay] Line grid UI shading
     {
-        line_grid_shading::line_grid_pass(
-            interface,
-            scene,
+        if scene.borrow().parameters.is_use_grid {
+            line_grid_shading::line_grid_pass(
+            &interface,
+            &scene,
             &mut main_command_encoder,
             &swapchain_view,
             &mut global_resources.borrow_mut(),
         );
+        }
     }
 
     interface

@@ -59,6 +59,8 @@ pub struct SceneParameter {
     pub is_use_composite: bool,
     pub is_use_tone_mapping: bool,
     pub is_use_gamma_correction: bool,
+    // overlay
+    pub is_use_grid: bool,
     // other config
     pub is_first_update: bool,
     pub is_convert_y_to_z: bool,
@@ -114,6 +116,8 @@ impl SceneParameter {
             is_use_composite: true,
             is_use_tone_mapping: true,
             is_use_gamma_correction: true,
+            // overlay
+            is_use_grid: false,
             // other config
             is_first_update: false,
             is_convert_y_to_z: true,

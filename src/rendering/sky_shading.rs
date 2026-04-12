@@ -4,7 +4,6 @@ use crate::rendering::webgpu::{
 };
 use crate::Shared;
 use wasm_bindgen::JsCast;
-use web_sys::js_sys::global;
 
 // sky shading pass --------------------------------------------------------------------------------------
 
