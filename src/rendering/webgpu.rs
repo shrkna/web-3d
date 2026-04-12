@@ -1,7 +1,7 @@
 use crate::engine::{self, define};
 use crate::rendering::common;
 use crate::rendering::{
-    bloom_shading, composite_shading, differed_shading, forward_shading, line_grid_shading,
+    bloom_shading, composite_shading, differed_shading, forward_shading, line_grid_shading, sky_shading,
 };
 use crate::types::Shared;
 use wasm_bindgen::JsCast;
@@ -23,6 +23,7 @@ pub struct WebGPUInterface<'a> {
     pub depth_texture: wgpu::Texture,
     pub intermediate_texture: wgpu::Texture,
     pub intermediate_texture_2: wgpu::Texture,
+    pub sky_hdr_texture: wgpu::Texture,
 }
 
 /// shader resource contains shader module and pipeline layout. It is shared between objects.
@@ -59,6 +60,7 @@ pub struct WebGPUUniqueResources {
     pub line_grid_shading_resource: Option<line_grid_shading::WebGPULineGridShadingResource>,
     pub bloom_shading_resource: Option<bloom_shading::WebGPUbloomShadingResource>,
     pub composite_shading_resource: Option<composite_shading::WebGPUCompositeShadingResource>,
+    pub sky_shading_resource: Option<sky_shading::WebGPUSkyShadingResource>,
 }
 
 // Webgpu Contexts -----------------------------------------------------------------------------
@@ -174,6 +176,27 @@ pub async fn init_interface<'a>() -> WebGPUInterface<'a> {
         view_formats: &[],
     });
 
+    let (sky_hdr_data, sky_hdr_width, sky_hdr_height) = engine::load::load_hdr_file(define::HDR_KLOPPENHEIM_02).await;
+    let sky_hdr_texture = device.create_texture_with_data(
+        &queue,
+        &wgpu::TextureDescriptor {
+            label: Some("Sky HDR Texture"),
+            size: wgpu::Extent3d {
+                width: sky_hdr_width,
+                height: sky_hdr_height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba32Float,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        },
+        wgpu::util::TextureDataOrder::default(),
+        bytemuck::cast_slice(&sky_hdr_data),
+    );
+
     // Return webgpu resource
 
     let interface: WebGPUInterface<'_> = WebGPUInterface {
@@ -185,6 +208,7 @@ pub async fn init_interface<'a>() -> WebGPUInterface<'a> {
         depth_texture,
         intermediate_texture,
         intermediate_texture_2,
+        sky_hdr_texture,
     };
 
     return interface;
@@ -236,7 +260,7 @@ pub fn update_rendering_main(
                 label: Some("Main command encoder"),
             });
 
-    // Main pass (forward or differed)
+    // Base pass (forward or differed)
     {
         let shading_type: engine::scene::ShadingType = scene.borrow().parameters.scene_shading_type;
         match shading_type {
@@ -261,6 +285,23 @@ pub fn update_rendering_main(
                 );
             }
         }
+    }
+
+    // HDR sky pass
+    if scene.borrow().parameters.is_use_sky_box {
+        sky_shading::sky_pass(
+            &interface,
+            &scene,
+            &mut main_command_encoder,
+            &intermediate_view,
+            &mut global_resources.borrow_mut(),
+        );
+
+        main_command_encoder.copy_texture_to_texture(
+            interface.intermediate_texture_2.as_image_copy(),
+            interface.intermediate_texture.as_image_copy(),
+            interface.intermediate_texture.size(),
+        );
     }
 
     // [Post-process] Bloom pass
@@ -291,7 +332,7 @@ pub fn update_rendering_main(
         );
     }
 
-    // [Debug] Line grid shading
+    // [Overlay] Line grid UI shading
     {
         line_grid_shading::line_grid_pass(
             interface,

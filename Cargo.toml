@@ -29,7 +29,7 @@ gltf 	 = { version = "1.4.1", features = ["KHR_materials_pbrSpecularGlossiness"]
 reqwest  = "0.11"
 anyhow   = "1.0.93"
 cfg-if	 = "1.0.0"
-image	 = { version = "0.25.5", default-features = false, features = ["png", "bmp"]}
+image	 = { version = "0.25.5", default-features = false, features = ["png", "bmp", "hdr"]}
 
 env_logger = "0.11.6"
 

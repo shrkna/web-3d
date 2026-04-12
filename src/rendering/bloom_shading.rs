@@ -295,7 +295,7 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
 
     let width: u32 = canvas.client_width() as u32;
     let height: u32 = canvas.client_height() as u32;
-    
+
     // General resources ----------------------------------------------------------------------------
 
     let bloom_texture: wgpu::Texture = interface.device.create_texture(&wgpu::TextureDescriptor {
@@ -332,31 +332,33 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
         mapped_at_creation: false,
     });
 
-    let uniform_bind_group_layout: wgpu::BindGroupLayout =
+    let uniform_bind_group_layout: wgpu::BindGroupLayout = interface
+        .device
+        .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("Bloom uniform bind group layout"),
+        });
+
+    let uniform_bind_group: wgpu::BindGroup =
         interface
             .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[wgpu::BindGroupLayoutEntry {
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &uniform_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
+                    resource: uniform_buffer.as_entire_binding(),
                 }],
-                label: Some("Bloom uniform bind group layout"),
+                label: Some("Bloom uniform bind group"),
             });
-    
-    let uniform_bind_group: wgpu::BindGroup = interface.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        layout: &uniform_bind_group_layout,
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: uniform_buffer.as_entire_binding(),
-        }],
-        label: Some("Bloom uniform bind group"),
-    });
 
     // Extraction pass ----------------------------------------------------------------------------
 
@@ -414,7 +416,10 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[&extraction_texture_bind_group_layout, &uniform_bind_group_layout],
+                bind_group_layouts: &[
+                    &extraction_texture_bind_group_layout,
+                    &uniform_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -833,9 +838,11 @@ fn create_bloom_shader_resource(interface: &WebGPUInterface) -> WebGPUbloomShadi
     };
 }
 
-fn update_bloom_uniform_buffer(interface: &WebGPUInterface,
+fn update_bloom_uniform_buffer(
+    interface: &WebGPUInterface,
     scene: &Shared<engine::scene::Scene>,
-    global_resources: &mut WebGPUUniqueResources) {
+    global_resources: &mut WebGPUUniqueResources,
+) {
     let bloom_threshold: f32 = scene.borrow().parameters.bloom_threshold;
 
     interface.queue.write_buffer(
@@ -845,5 +852,6 @@ fn update_bloom_uniform_buffer(interface: &WebGPUInterface,
             .unwrap()
             .bloom_uniform_buffer,
         0,
-        bytemuck::cast_slice(&[bloom_threshold]));
+        bytemuck::cast_slice(&[bloom_threshold]),
+    );
 }

@@ -51,6 +51,8 @@ pub struct SceneParameter {
     pub scene_shading_type: ShadingType,
     pub forward_debug_type: u8,
     pub differed_debug_type: u8,
+    // sky box
+    pub is_use_sky_box: bool,
     // postprocess
     pub is_use_bloom: bool,
     pub bloom_threshold: f32,
@@ -104,6 +106,8 @@ impl SceneParameter {
             scene_shading_type: ShadingType::Differed,
             forward_debug_type: 0,
             differed_debug_type: 0,
+            // sky box
+            is_use_sky_box: true,
             // postprocess
             is_use_bloom: true,
             bloom_threshold: 1.0,

@@ -20,6 +20,9 @@ fn create_debug_dialog(scene: &Shared<engine::scene::Scene>) {
     // Base pass dialog
     create_debug_dialog_base_pass(&dialog_wrapper, scene);
 
+    // Sky box dialog
+    create_debug_dialog_sky_box(&dialog_wrapper, scene);
+
     // Postprocess dialog
     create_debug_dialog_postprocess(&dialog_wrapper, &scene);
 
@@ -976,6 +979,118 @@ fn create_debug_dialog_base_pass(parent: &web_sys::Element, scene: &Shared<engin
     parent.append_child(&dialog_base_pass).unwrap();
 }
 
+fn create_debug_dialog_sky_box(parent: &web_sys::Element, scene: &Shared<engine::scene::Scene>) {
+    let view_statistics = gloo::utils::document().create_element("div").unwrap();
+    view_statistics.set_id("dialog-element-skybox");
+    view_statistics.set_class_name("dialog-element dialog-element-display");
+
+    let accordion_input_element = gloo::utils::document().create_element("input").unwrap();
+    let accordion_input_element: web_sys::HtmlInputElement =
+        accordion_input_element.dyn_into().unwrap();
+    accordion_input_element
+        .set_attribute("type", "checkbox")
+        .unwrap();
+    accordion_input_element.set_class_name("accordion-input");
+    accordion_input_element.set_id("accordion-skybox");
+    // accordion_input_element.set_checked(true);
+
+    let accordion_label_element = gloo::utils::document().create_element("label").unwrap();
+    accordion_label_element.set_class_name("accordion-label");
+    accordion_label_element.set_text_content(Some("Skybox"));
+    accordion_label_element
+        .set_attribute("for", "accordion-skybox")
+        .unwrap();
+
+    let accordion_content_element = gloo::utils::document().create_element("div").unwrap();
+    accordion_content_element.set_class_name("accordion-content");
+
+    // active
+    {
+        let active_element: web_sys::Element =
+            gloo::utils::document().create_element("div").unwrap();
+        active_element.set_class_name("widget-row");
+
+        let active_label_element: web_sys::Element =
+            gloo::utils::document().create_element("div").unwrap();
+        active_label_element.set_class_name("widget-label");
+        active_label_element.set_text_content(Some("Active"));
+
+        let active_content_element = gloo::utils::document().create_element("div").unwrap();
+        active_content_element.set_class_name("widget-value");
+        active_content_element.set_id("active-analytics-value");
+
+        {
+            let sky_box_active_input_checkbox: web_sys::Element =
+                gloo::utils::document().create_element("input").unwrap();
+            let sky_box_active_input_checkbox: web_sys::HtmlInputElement =
+                sky_box_active_input_checkbox.dyn_into().unwrap();
+            sky_box_active_input_checkbox.set_id("skybox-active");
+            sky_box_active_input_checkbox.set_class_name("checkbox-element");
+            sky_box_active_input_checkbox
+                .set_attribute("type", "checkbox")
+                .unwrap();
+            sky_box_active_input_checkbox.set_checked(scene.borrow().parameters.is_use_sky_box);
+
+            {
+                let scene_clone: Shared<engine::scene::Scene> = scene.clone();
+
+                let sky_box_active_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
+                    wasm_bindgen::closure::Closure::wrap(Box::new(
+                        move |_event: web_sys::InputEvent| {
+                            let sky_box_active_element: web_sys::Element =
+                                gloo::utils::document()
+                                    .get_element_by_id("skybox-active")
+                                    .unwrap();
+                            let sky_box_active_element: web_sys::HtmlInputElement =
+                                sky_box_active_element.dyn_into().unwrap();
+                            let value: bool = sky_box_active_element.checked();
+
+                            let mut scene_value = scene_clone.borrow_mut();
+                            scene_value.parameters.is_use_sky_box = value;
+                        },
+                    )
+                        as Box<dyn FnMut(_)>);
+
+                sky_box_active_input_checkbox
+                    .add_event_listener_with_callback(
+                        "input",
+                        sky_box_active_closure.as_ref().unchecked_ref(),
+                    )
+                    .unwrap();
+                sky_box_active_closure.forget();
+            }
+
+            active_content_element
+                .append_child(&sky_box_active_input_checkbox)
+                .unwrap();
+        }
+
+
+        active_element
+            .append_child(&active_label_element)
+            .unwrap();
+        active_element
+            .append_child(&active_content_element)
+            .unwrap();
+
+        accordion_content_element
+            .append_child(&active_element)
+            .unwrap();
+    }
+
+    view_statistics
+        .append_child(&accordion_input_element)
+        .unwrap();
+    view_statistics
+        .append_child(&accordion_label_element)
+        .unwrap();
+    view_statistics
+        .append_child(&accordion_content_element)
+        .unwrap();
+
+    parent.append_child(&view_statistics).unwrap();
+}
+
 fn create_debug_dialog_postprocess(
     parent: &web_sys::Element,
     scene: &Shared<engine::scene::Scene>,
@@ -1029,8 +1144,7 @@ fn create_debug_dialog_postprocess(
 
         let bloom_accordion_content_element =
             gloo::utils::document().create_element("div").unwrap();
-        bloom_accordion_content_element
-            .set_class_name("accordion-content inner-accordion-content");
+        bloom_accordion_content_element.set_class_name("accordion-content inner-accordion-content");
 
         // active
         {
@@ -1057,9 +1171,7 @@ fn create_debug_dialog_postprocess(
                 bloom_active_input_checkbox
                     .set_attribute("type", "checkbox")
                     .unwrap();
-                bloom_active_input_checkbox.set_checked(
-                    scene_value.parameters.is_use_bloom
-                );
+                bloom_active_input_checkbox.set_checked(scene_value.parameters.is_use_bloom);
 
                 {
                     let scene_clone: Shared<engine::scene::Scene> = scene.clone();
@@ -1067,9 +1179,10 @@ fn create_debug_dialog_postprocess(
                     let bloom_active_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
                         wasm_bindgen::closure::Closure::wrap(Box::new(
                             move |_event: web_sys::InputEvent| {
-                                let bloom_active_element: web_sys::Element = gloo::utils::document()
-                                    .get_element_by_id("bloom-active")
-                                    .unwrap();
+                                let bloom_active_element: web_sys::Element =
+                                    gloo::utils::document()
+                                        .get_element_by_id("bloom-active")
+                                        .unwrap();
                                 let bloom_active_element: web_sys::HtmlInputElement =
                                     bloom_active_element.dyn_into().unwrap();
                                 let value: bool = bloom_active_element.checked();
@@ -1117,8 +1230,7 @@ fn create_debug_dialog_postprocess(
             threshold_label_element.set_class_name("widget-label");
             threshold_label_element.set_text_content(Some("Threshold"));
 
-            let threshold_content_element =
-                gloo::utils::document().create_element("div").unwrap();
+            let threshold_content_element = gloo::utils::document().create_element("div").unwrap();
             threshold_content_element.set_class_name("widget-value");
 
             {
@@ -1131,29 +1243,18 @@ fn create_debug_dialog_postprocess(
                 threshold_input_range
                     .set_attribute("type", "range")
                     .unwrap();
+                threshold_input_range.set_attribute("min", "0.0").unwrap();
+                threshold_input_range.set_attribute("max", "2.0").unwrap();
+                threshold_input_range.set_attribute("step", "0.01").unwrap();
                 threshold_input_range
-                    .set_attribute("min", "0.0")
-                    .unwrap();
-                threshold_input_range
-                    .set_attribute("max", "2.0")
-                    .unwrap();
-                threshold_input_range
-                    .set_attribute("step", "0.01")
-                    .unwrap();
-                threshold_input_range.set_value(
-                    scene_value.parameters.bloom_threshold
-                        .to_string()
-                        .as_str(),
-                );
+                    .set_value(scene_value.parameters.bloom_threshold.to_string().as_str());
 
                 let threshold_input_range_text: web_sys::Element =
                     gloo::utils::document().create_element("div").unwrap();
                 threshold_input_range_text.set_id("threshold-range-text");
                 threshold_input_range_text.set_class_name("range-text-element");
                 threshold_input_range_text.set_text_content(Some(
-                    scene_value.parameters.bloom_threshold
-                        .to_string()
-                        .as_str(),
+                    scene_value.parameters.bloom_threshold.to_string().as_str(),
                 ));
 
                 {
@@ -1210,7 +1311,7 @@ fn create_debug_dialog_postprocess(
                 .append_child(&threshold_element)
                 .unwrap();
         }
-        
+
         accordion_content_element
             .append_child(&bloom_accordion_input_element)
             .unwrap();
@@ -1273,9 +1374,8 @@ fn create_debug_dialog_postprocess(
                 composite_active_input_checkbox
                     .set_attribute("type", "checkbox")
                     .unwrap();
-                composite_active_input_checkbox.set_checked(
-                    scene_value.parameters.is_use_composite
-                );
+                composite_active_input_checkbox
+                    .set_checked(scene_value.parameters.is_use_composite);
 
                 {
                     let scene_clone: Shared<engine::scene::Scene> = scene.clone();
@@ -1283,9 +1383,10 @@ fn create_debug_dialog_postprocess(
                     let composite_active_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
                         wasm_bindgen::closure::Closure::wrap(Box::new(
                             move |_event: web_sys::InputEvent| {
-                                let composite_active_element: web_sys::Element = gloo::utils::document()
-                                    .get_element_by_id("composite-active")
-                                    .unwrap();
+                                let composite_active_element: web_sys::Element =
+                                    gloo::utils::document()
+                                        .get_element_by_id("composite-active")
+                                        .unwrap();
                                 let composite_active_element: web_sys::HtmlInputElement =
                                     composite_active_element.dyn_into().unwrap();
                                 let value: bool = composite_active_element.checked();
@@ -1321,7 +1422,7 @@ fn create_debug_dialog_postprocess(
                 .append_child(&composite_active_element)
                 .unwrap();
         }
-        
+
         // tone mapping
         {
             let tone_mapping_element: web_sys::Element =
@@ -1347,9 +1448,7 @@ fn create_debug_dialog_postprocess(
                 tone_mapping_input_checkbox
                     .set_attribute("type", "checkbox")
                     .unwrap();
-                tone_mapping_input_checkbox.set_checked(
-                    scene_value.parameters.is_use_tone_mapping
-                );
+                tone_mapping_input_checkbox.set_checked(scene_value.parameters.is_use_tone_mapping);
 
                 {
                     let scene_clone: Shared<engine::scene::Scene> = scene.clone();
@@ -1357,9 +1456,10 @@ fn create_debug_dialog_postprocess(
                     let tone_mapping_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
                         wasm_bindgen::closure::Closure::wrap(Box::new(
                             move |_event: web_sys::InputEvent| {
-                                let tone_mapping_element: web_sys::Element = gloo::utils::document()
-                                    .get_element_by_id("tone-mapping-active")
-                                    .unwrap();
+                                let tone_mapping_element: web_sys::Element =
+                                    gloo::utils::document()
+                                        .get_element_by_id("tone-mapping-active")
+                                        .unwrap();
                                 let tone_mapping_element: web_sys::HtmlInputElement =
                                     tone_mapping_element.dyn_into().unwrap();
                                 let value: bool = tone_mapping_element.checked();
@@ -1421,9 +1521,8 @@ fn create_debug_dialog_postprocess(
                 gamma_correction_input_checkbox
                     .set_attribute("type", "checkbox")
                     .unwrap();
-                gamma_correction_input_checkbox.set_checked(
-                    scene_value.parameters.is_use_gamma_correction
-                );
+                gamma_correction_input_checkbox
+                    .set_checked(scene_value.parameters.is_use_gamma_correction);
 
                 {
                     let scene_clone: Shared<engine::scene::Scene> = scene.clone();
@@ -1431,9 +1530,10 @@ fn create_debug_dialog_postprocess(
                     let gamma_correction_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
                         wasm_bindgen::closure::Closure::wrap(Box::new(
                             move |_event: web_sys::InputEvent| {
-                                let gamma_correction_element: web_sys::Element = gloo::utils::document()
-                                    .get_element_by_id("gamma-correction-active")
-                                    .unwrap();
+                                let gamma_correction_element: web_sys::Element =
+                                    gloo::utils::document()
+                                        .get_element_by_id("gamma-correction-active")
+                                        .unwrap();
                                 let gamma_correction_element: web_sys::HtmlInputElement =
                                     gamma_correction_element.dyn_into().unwrap();
                                 let value: bool = gamma_correction_element.checked();
@@ -1470,7 +1570,6 @@ fn create_debug_dialog_postprocess(
                 .unwrap();
         }
 
-
         accordion_content_element
             .append_child(&composite_accordion_input_element)
             .unwrap();
@@ -1481,7 +1580,6 @@ fn create_debug_dialog_postprocess(
             .append_child(&composite_accordion_content_element)
             .unwrap();
     }
-
 
     view_statistics
         .append_child(&accordion_input_element)

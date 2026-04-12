@@ -74,7 +74,7 @@ pub struct WebGPUCompositeShadingResource {
     pub render_pipeline: wgpu::RenderPipeline,
 }
 
-pub struct CompositeUniformBuffer{
+pub struct CompositeUniformBuffer {
     pub _is_use_tone_mapping: f32,
     pub _is_use_gamma_correction: f32,
 }
@@ -148,7 +148,7 @@ fn create_composite_shader_resource(interface: &WebGPUInterface) -> WebGPUCompos
                 ],
                 label: Some("Line Grid Texture Bind Group"),
             });
-    
+
     let uniform_buffer = interface.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Composite Uniform Buffer"),
         size: std::mem::size_of::<CompositeUniformBuffer>() as u64,
@@ -175,22 +175,20 @@ fn create_composite_shader_resource(interface: &WebGPUInterface) -> WebGPUCompos
                 ],
                 label: Some("composite_uniform_bind_group_layout"),
             });
-    
+
     let uniform_bind_group: wgpu::BindGroup =
         interface
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
                 layout: &uniform_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                            buffer: &uniform_buffer,
-                            offset: 0,
-                            size: None,
-                        }),
-                    },
-                ],
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &uniform_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                }],
                 label: Some("composite_uniform_bind_group"),
             });
 

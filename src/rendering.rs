@@ -4,4 +4,5 @@ pub mod composite_shading;
 pub mod differed_shading;
 pub mod forward_shading;
 pub mod line_grid_shading;
+pub mod sky_shading;
 pub mod webgpu;
