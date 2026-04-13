@@ -1,7 +1,7 @@
 use crate::engine;
 use crate::rendering;
-use image::ImageDecoder;
 use image::codecs::hdr::HdrDecoder;
+use image::ImageDecoder;
 
 // Utility
 
@@ -283,29 +283,38 @@ pub async fn load_gltf_scene(
     return (out_objects, out_materials);
 }
 
-pub async fn load_hdr_file(
-    file_name: &str
-) -> (Vec<f32>, u32, u32) {
-    let hdr_binary = load_binary(file_name).await.expect("Failed to load HDR file");
+pub async fn load_hdr_file(file_name: &str) -> (Vec<half::f16>, u32, u32) {
+    let hdr_binary = load_binary(file_name)
+        .await
+        .expect("Failed to load HDR file");
 
     let reader = std::io::BufReader::new(&hdr_binary[..]);
     let decoder = HdrDecoder::new(reader).expect("Failed to decode HDR");
     let metadata = decoder.metadata();
-    log::debug!("HDR Metadata : width {}, height {}", metadata.width, metadata.height);
+    log::debug!(
+        "HDR Metadata : width {}, height {}",
+        metadata.width,
+        metadata.height
+    );
 
     // HDRピクセル（f32 * 3チャンネル）を読み込み
     let mut hdr_buffer: Vec<u8> = vec![0u8; (metadata.width * metadata.height * 3 * 4) as usize];
     decoder.read_image(&mut hdr_buffer).unwrap();
 
     let f32_data: &[f32] = bytemuck::cast_slice(&hdr_buffer);
+    
+    let f16_data: Vec<half::f16> = f32_data
+    .into_iter()
+    .map(|&value| half::f16::from_f32(value))
+    .collect();
 
     let mut rgba_data = Vec::with_capacity((metadata.width * metadata.height * 4) as usize);
 
-    for rgb in f32_data.chunks_exact(3) {
+    for rgb in f16_data.chunks_exact(3) {
         rgba_data.push(rgb[0]); // R
         rgba_data.push(rgb[1]); // G
         rgba_data.push(rgb[2]); // B
-        rgba_data.push(1.0);    // A (アルファチャンネルを追加)
+        rgba_data.push(half::f16::from_f32(1.0)); // A (アルファチャンネルを追加)
     }
 
     return (rgba_data, metadata.width, metadata.height);

@@ -1040,10 +1040,9 @@ fn create_debug_dialog_sky_box(parent: &web_sys::Element, scene: &Shared<engine:
                 let sky_box_active_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
                     wasm_bindgen::closure::Closure::wrap(Box::new(
                         move |_event: web_sys::InputEvent| {
-                            let sky_box_active_element: web_sys::Element =
-                                gloo::utils::document()
-                                    .get_element_by_id("skybox-active")
-                                    .unwrap();
+                            let sky_box_active_element: web_sys::Element = gloo::utils::document()
+                                .get_element_by_id("skybox-active")
+                                .unwrap();
                             let sky_box_active_element: web_sys::HtmlInputElement =
                                 sky_box_active_element.dyn_into().unwrap();
                             let value: bool = sky_box_active_element.checked();
@@ -1068,10 +1067,7 @@ fn create_debug_dialog_sky_box(parent: &web_sys::Element, scene: &Shared<engine:
                 .unwrap();
         }
 
-
-        active_element
-            .append_child(&active_label_element)
-            .unwrap();
+        active_element.append_child(&active_label_element).unwrap();
         active_element
             .append_child(&active_content_element)
             .unwrap();
@@ -1597,10 +1593,7 @@ fn create_debug_dialog_postprocess(
     parent.append_child(&view_statistics).unwrap();
 }
 
-fn create_debug_dialog_overlay(
-    parent: &web_sys::Element,
-    scene: &Shared<engine::scene::Scene>,
-) {
+fn create_debug_dialog_overlay(parent: &web_sys::Element, scene: &Shared<engine::scene::Scene>) {
     let scene_value = scene.borrow();
 
     let dialog_overlay = gloo::utils::document().create_element("div").unwrap();
@@ -1629,8 +1622,7 @@ fn create_debug_dialog_overlay(
 
     // grid
     {
-        let grid_accordion_input_element =
-            gloo::utils::document().create_element("input").unwrap();
+        let grid_accordion_input_element = gloo::utils::document().create_element("input").unwrap();
         let grid_accordion_input_element: web_sys::HtmlInputElement =
             grid_accordion_input_element.dyn_into().unwrap();
         grid_accordion_input_element
@@ -1640,16 +1632,14 @@ fn create_debug_dialog_overlay(
         grid_accordion_input_element.set_id("accordion-grid");
         //grid_accordion_input_element.set_checked(true);
 
-        let grid_accordion_label_element =
-            gloo::utils::document().create_element("label").unwrap();
+        let grid_accordion_label_element = gloo::utils::document().create_element("label").unwrap();
         grid_accordion_label_element.set_class_name("accordion-label inner-accordion-label");
         grid_accordion_label_element.set_text_content(Some("Grid"));
         grid_accordion_label_element
             .set_attribute("for", "accordion-grid")
             .unwrap();
 
-        let grid_accordion_content_element =
-            gloo::utils::document().create_element("div").unwrap();
+        let grid_accordion_content_element = gloo::utils::document().create_element("div").unwrap();
         grid_accordion_content_element.set_class_name("accordion-content inner-accordion-content");
 
         // active
@@ -1685,10 +1675,9 @@ fn create_debug_dialog_overlay(
                     let grid_active_closure: wasm_bindgen::prelude::Closure<dyn FnMut(_)> =
                         wasm_bindgen::closure::Closure::wrap(Box::new(
                             move |_event: web_sys::InputEvent| {
-                                let grid_active_element: web_sys::Element =
-                                    gloo::utils::document()
-                                        .get_element_by_id("grid-active")
-                                        .unwrap();
+                                let grid_active_element: web_sys::Element = gloo::utils::document()
+                                    .get_element_by_id("grid-active")
+                                    .unwrap();
                                 let grid_active_element: web_sys::HtmlInputElement =
                                     grid_active_element.dyn_into().unwrap();
                                 let value: bool = grid_active_element.checked();

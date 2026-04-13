@@ -11,4 +11,4 @@ pub const FS_ENTRY_POINT: &str = "fs_main";
 pub const GLTF_LOGO_PATH: &str = "resource/gltf_logo/scene.gltf";
 
 // .hdr files from Poly Haven (https://polyhaven.com/hdris)
-pub const HDR_KLOPPENHEIM_02 : &str = "resource/kloppenheim_02/kloppenheim_02_2k.hdr";
+pub const HDR_KLOPPENHEIM_02: &str = "resource/kloppenheim_02/kloppenheim_02_2k.hdr";

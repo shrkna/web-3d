@@ -30,8 +30,10 @@ reqwest  = "0.11"
 anyhow   = "1.0.93"
 cfg-if	 = "1.0.0"
 image	 = { version = "0.25.5", default-features = false, features = ["png", "bmp", "hdr"]}
+half     = { version = "2.7.1", features = ["bytemuck"] }
 
 env_logger = "0.11.6"
+
 
 [dependencies.web-sys]
 version = "0.3.72"

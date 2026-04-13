@@ -1,7 +1,8 @@
 use crate::engine::{self, define};
 use crate::rendering::common;
 use crate::rendering::{
-    bloom_shading, composite_shading, differed_shading, forward_shading, line_grid_shading, sky_shading,
+    bloom_shading, composite_shading, differed_shading, forward_shading, line_grid_shading,
+    sky_shading,
 };
 use crate::types::Shared;
 use wasm_bindgen::JsCast;
@@ -176,7 +177,8 @@ pub async fn init_interface<'a>() -> WebGPUInterface<'a> {
         view_formats: &[],
     });
 
-    let (sky_hdr_data, sky_hdr_width, sky_hdr_height) = engine::load::load_hdr_file(define::HDR_KLOPPENHEIM_02).await;
+    let (sky_hdr_data, sky_hdr_width, sky_hdr_height) =
+        engine::load::load_hdr_file(define::HDR_KLOPPENHEIM_02).await;
     let sky_hdr_texture = device.create_texture_with_data(
         &queue,
         &wgpu::TextureDescriptor {
@@ -189,7 +191,7 @@ pub async fn init_interface<'a>() -> WebGPUInterface<'a> {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba32Float,
+            format: wgpu::TextureFormat::Rgba16Float,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         },
@@ -336,12 +338,12 @@ pub fn update_rendering_main(
     {
         if scene.borrow().parameters.is_use_grid {
             line_grid_shading::line_grid_pass(
-            &interface,
-            &scene,
-            &mut main_command_encoder,
-            &swapchain_view,
-            &mut global_resources.borrow_mut(),
-        );
+                &interface,
+                &scene,
+                &mut main_command_encoder,
+                &swapchain_view,
+                &mut global_resources.borrow_mut(),
+            );
         }
     }
 
